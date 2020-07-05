@@ -66,25 +66,26 @@ module BuildShocktubes
         n_part = length(x_in[:,1])
         x = zeros(8*n_part, length(x_in[1,:]))
 
-        for i = 0:7
-            x[i*n_part+1:(i+1)*n_part,:] .= x_in
+        count = 0
+
+        for ix = 0:1, iy = 0:1, iz = 0:1
+            ii = [ix, iy, iz]
+            for dim = 1:3
+                x[count*n_part+1:(count+1)*n_part,dim] = (x_in[:,dim] .+ ii[dim])
+            end
+            count += 1
         end
 
         x = 0.5 .* x
 
         if hsml_in != [0.0]
-
             h = zeros(8*n_part)
             for i = 0:7
                 h[i*n_part+1:(i+1)*n_part] = 0.5 .* hsml_in[:,1]
             end
-
             return x, h
-
         else
-
             return x
-
         end
     end
 
