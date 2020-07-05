@@ -88,8 +88,7 @@ module BuildShocktubes
         end
     end
 
-    function buildTube(x0, 
-                    n_blocks::Integer, hsml0::Real=0, offset::Integer=0)
+    function buildTube(x0, n_blocks, hsml0=0, offset=0)
 
         n_part = length(x0[:,1])
         x = zeros(n_blocks*n_part, length(x0[1,:]))
@@ -146,9 +145,7 @@ module BuildShocktubes
         return imin, imax
     end
 
-
-    function interpolate_components(Bh::Array{Float64,3}, 
-                                    dx::Float64, dy::Float64, dz::Float64,
+    function interpolate_components(Bh, dx::Float64, dy::Float64, dz::Float64,
                                     ixmin::Int64, ixmax::Int64,
                                     iymin::Int64, iymax::Int64,
                                     izmin::Int64, izmax::Int64 )
@@ -398,7 +395,6 @@ module BuildShocktubes
         return [bx by bz]
     end
 
-
     function setup_shocktube(par::ShockParameters)
 
         println("reading glass file")
@@ -521,6 +517,5 @@ module BuildShocktubes
         close(f)
 
     end
-
 
 end # module
