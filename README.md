@@ -4,10 +4,9 @@ This script gives a framework to set up arbitrary shocktubes for standard hydro 
 
 ## Install
 
-The files `Project.toml` and `Manifest.toml` contain all dependencies with the correct version numbers. The first line of the script installs dependencies and activates the virtual environment used for the setup:
-
+As typical for Julia, just use:
 ```julia
-using Pkg; Pkg.instantiate(); Pkg.activate()
+] add https://github.com/LudwigBoess/BuildShocktubes.jl
 ```
 
 ## General setup
