@@ -80,7 +80,6 @@ As an example, you can set up their shock from figure 5a with:
 
 ```julia
 using BuildShocktubes
-using AnalyticMHDTestSolutions
 
 glass_file = "/path/to/glass.file"
 
