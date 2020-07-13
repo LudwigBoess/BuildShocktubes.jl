@@ -37,6 +37,9 @@ For that we use the package [AnalyticMHDTestSolutions.jl](https://github.com/Lud
 To get the left and right internal energies for an arbitrary Mach number use:
 
 ```julia
+using BuildShocktubes
+using AnalyticMHDTestSolutions
+
 Mach_number = 100.0
 riemann_par = RiemannParameters(Ul=100.0, Mach=Mach_number, t=1.5)
 
@@ -50,6 +53,9 @@ Sod shocks, after [Sod (1978)](https://doi.org/10.1016%2F0021-9991%2878%2990023-
 You can set them up by using:
 
 ```julia
+using BuildShocktubes
+using AnalyticMHDTestSolutions
+
 glass_file = "/path/to/glass.file"
 
 out_file = "path/to/out.file"
@@ -73,6 +79,9 @@ setup_shocktube(param)
 As an example, you can set up their shock from figure 5a with:
 
 ```julia
+using BuildShocktubes
+using AnalyticMHDTestSolutions
+
 glass_file = "/path/to/glass.file"
 
 out_file = "path/to/out.file"
@@ -102,6 +111,9 @@ which returns the magnetic field vector `B`. The arbitrary argument `reduction_s
 You can the set up a shock with:
 
 ```julia
+using BuildShocktubes
+using AnalyticMHDTestSolutions
+
 glass_file = "/path/to/glass.file"
 
 out_file = "path/to/out.file"
@@ -127,6 +139,9 @@ setup_shocktube(param)
 To set up a shock with a random, but divergence-free magnetic field you can use:
 
 ```julia
+using BuildShocktubes
+using AnalyticMHDTestSolutions
+
 glass_file = "/path/to/glass.file"
 
 out_file = "path/to/out.file"
