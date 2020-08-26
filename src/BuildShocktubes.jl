@@ -206,7 +206,7 @@ module BuildShocktubes
         nnn = (NFFT2+1)^3 * 4
 
         val = randn(nnn)
-        ϕ2  = rand(nnn) .* 2.0π
+        ϕ2  = rand(nnn) .* 2π
 
         kx = zeros(Int64, NFFT)
         ky = zeros(Int64, NFFT)
@@ -339,6 +339,8 @@ module BuildShocktubes
             zp[iz] = 1.0/(kz[iz] * mink)
         end
 
+        @info "FFTW"
+
         Bhx = fft(Bhx)
         Bfehler1 = sum(abs.(imag.(Bhx)))
         Bhx = real.(Bhx)
@@ -383,13 +385,13 @@ module BuildShocktubes
                                         izmin, izmax)
 
             # y component
-            by[i] = interpolate_components(Bhx, dx, dy, dz, 
+            by[i] = interpolate_components(Bhy, dx, dy, dz, 
                                         ixmin, ixmax,
                                         iymin, iymax,
                                         izmin, izmax)
 
             # z component
-            bz[i] = interpolate_components(Bhx, dx, dy, dz, 
+            bz[i] = interpolate_components(Bhz, dx, dy, dz, 
                                         ixmin, ixmax,
                                         iymin, iymax,
                                         izmin, izmax)
