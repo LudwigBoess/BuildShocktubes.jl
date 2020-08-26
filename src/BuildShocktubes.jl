@@ -62,7 +62,7 @@ module BuildShocktubes
 
     end
 
-    function getLargeBox(x_in, hsml_in=[0.0])
+    function getLargeBox(x_in::Array{<:Real}, hsml_in::Array{<:Real}=[0.0])
 
         n_part = length(x_in[:,1])
         x = zeros(8*n_part, length(x_in[1,:]))
@@ -90,7 +90,7 @@ module BuildShocktubes
         end
     end
 
-    function buildTube(x0, n_blocks, hsml0=0, offset=0)
+    function buildTube(x0::Array{<:Real}, n_blocks::Integer, hsml0=0, offset=0)
 
         n_part = length(x0[:,1])
         x = zeros(n_blocks*n_part, length(x0[1,:]))
@@ -111,7 +111,7 @@ module BuildShocktubes
         return Float32.(x)
     end
 
-    function build_B_tube(B_in, n_blocks)
+    function build_B_tube(B_in::Array{<:Real}, n_blocks::Integer)
 
         n_part = length(B_in[:,1])
         B = zeros(n_blocks*n_part, length(B_in[1,:]))
@@ -123,7 +123,7 @@ module BuildShocktubes
         return Float32.(B)
     end
 
-    function findii(x, xtab)
+    function findii(x::Real, xtab::Array{<:Real})
 
         n = length(xtab)
 
@@ -147,10 +147,11 @@ module BuildShocktubes
         return imin, imax
     end
 
-    function interpolate_components(Bh, dx::Float64, dy::Float64, dz::Float64,
-                                    ixmin::Int64, ixmax::Int64,
-                                    iymin::Int64, iymax::Int64,
-                                    izmin::Int64, izmax::Int64 )
+    function interpolate_components(Bh::Array{<:Real}, 
+                                    dx::Real, dy::Real, dz::Real,
+                                    ixmin::Integer, ixmax::Integer,
+                                    iymin::Integer, iymax::Integer,
+                                    izmin::Integer, izmax::Integer )
 
         fx1y1z1 = Bh[ixmin, iymin, izmin]
         fx1y1z2 = Bh[ixmin, iymin, izmax]
@@ -173,8 +174,8 @@ module BuildShocktubes
         return b
     end
 
-    function setup_turb_B(pos, 
-                        npart::Int64, B0::Float64)
+    function setup_turb_B(pos::Array{<:Real}, 
+                        npart::Integer, B0::Real)
 
         r = zeros(npart)
 
@@ -434,23 +435,29 @@ module BuildShocktubes
         # set up random magnetic field
         if par.turb
 
-            # n_large = length(x_large[:,1])
-            # B_large = setup_turb_B(x_large, n_large, par.B0)
+            n_large = length(x_large[:,1])
+            B_large = setup_turb_B(x_large, n_large, par.B0)
 
-            # n_small = length(x_small[:,1])
-            # B_small = setup_turb_B(x_small, n_small, par.B0)
+            n_small = length(x_small[:,1])
+            B_small = setup_turb_B(x_small, n_small, par.B0)
 
-            # println("Building B tube")
-            # B_left = build_B_tube(B_large, n_blocks)
-            # B_right = build_B_tube(B_small, n_blocks)
-            # B = [B_left; B_right]
+            @info "Building B tube"
+            
+            B_left = build_B_tube(B_large, n_blocks)
+            B_right = build_B_tube(B_small, n_blocks)
+            B = [B_left; B_right]
+            N_B = length(B[:,1])
+
+            # println("Setting up turb B")
+            # B = setup_turb_B(x, N, par.B0)
             # N_B = length(B[:,1])
-            B = setup_turb_B(x, N, par.B0)
-
 
             # if N != N_B
-            #     error("Error in tube building!\nN = $N\nN_B = $N_B")
+            #     error("Error in tube building x!\nN = $N\nN_B = $N_B")
             # end
+
+            B = Float32.(B)
+
 
         else
             B = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
@@ -509,13 +516,13 @@ module BuildShocktubes
         println("writing ic file")
 
         f = open(par.output_file, "w")
-        write_header(f, head)
-        write_block(f, x, "POS")
-        write_block(f, vel, "VEL")
-        write_block(f, id, "ID")
-        write_block(f, U, "U")
-        write_block(f, hsml_out, "HSML")
-        write_block(f, B, "BFLD")
+        write_header( f, head)
+        write_block(  f, x,        "POS")
+        write_block(  f, vel,      "VEL")
+        write_block(  f, id,       "ID")
+        write_block(  f, U,        "U")
+        write_block(  f, hsml_out, "HSML")
+        write_block(  f, B,        "BFLD")
         close(f)
 
     end
