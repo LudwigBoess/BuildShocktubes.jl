@@ -20,6 +20,7 @@ module BuildShocktubes
         B::Array{Float64,2}
         U::Vector{Float64}
         B0::Float64
+        density_step::Bool
         turb::Bool
 
         function ShockParameters(glass_file::String="", output_file::String="",
@@ -27,11 +28,12 @@ module BuildShocktubes
                                 B::Array{Float64,2}=zeros(2,3),
                                 v::Array{Float64,2}=zeros(2,3);
                                 turb::Bool=false,
-                                B0::Float64=0.0, 
+                                B0::Float64=0.0,
+                                density_step::Bool=true,
                                 n_blocks::Int64=70)
 
             new(glass_file, output_file, n_blocks,
-                v, B, U, B0, turb)
+                v, B, U, B0, density_step, turb)
 
         end
     end
@@ -400,7 +402,7 @@ module BuildShocktubes
         return [bx by bz]
     end
 
-    function setup_shocktube(par::ShockParameters)
+    function setup_shocktube(par::ShockParameters; arepo::Bool=false)
 
         println("reading glass file")
         pos_info = Info_Line("POS", Float32, 3, [1,0,0,0,0,0])
@@ -424,7 +426,11 @@ module BuildShocktubes
 
         # build tubes
         println("Building x tubes")
-        x_left, hsml_left = buildTube(x_large, n_blocks, hsml_l)
+        if par.density_step
+            x_left, hsml_left = buildTube(x_large, n_blocks, hsml_l)
+        else
+            x_left, hsml_left = buildTube(x_small, n_blocks, hsml)
+        end
         x_right, hsml_right = buildTube(x_small, n_blocks, hsml, n_blocks)
 
         x = [x_left; x_right]
@@ -464,15 +470,13 @@ module BuildShocktubes
         else
             B = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
 
-            # Bx =  0.75  0.75
-            # By = +1    -1
-            # Bz =  0     0
-
-            B[left_part,1]  .= Float32(par.B[1,1])
+            B[left_part, 1] .= Float32(par.B[1,1])
             B[right_part,1] .= Float32(par.B[2,1])
-            B[left_part,2]  .= Float32(par.B[1,2])
+
+            B[left_part, 2] .= Float32(par.B[1,2])
             B[right_part,2] .= Float32(par.B[2,2])
-            B[left_part,3]  .= Float32(par.B[1,3])
+
+            B[left_part, 3] .= Float32(par.B[1,3])
             B[right_part,3] .= Float32(par.B[2,3])
         end
 
@@ -493,16 +497,11 @@ module BuildShocktubes
 
         println("Assigning shock parameters")
 
-
         head = head_to_obj(par.glass_file)
         head.boxsize = 100000.0
         head.npart[1] = N
         head.nall[1] = N
         head.massarr[1] = m
-
-        ρ = Vector{Float32}(undef, N)
-        ρ[left_part] .= Float32(1.0)
-        ρ[right_part] .= Float32(0.125)
 
         vel = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
 
@@ -517,15 +516,39 @@ module BuildShocktubes
 
         println("writing ic file")
 
-        f = open(par.output_file, "w")
-        write_header( f, head)
-        write_block(  f, x,        "POS")
-        write_block(  f, vel,      "VEL")
-        write_block(  f, id,       "ID")
-        write_block(  f, U,        "U")
-        write_block(  f, hsml_out, "HSML")
-        write_block(  f, B,        "BFLD")
-        close(f)
+        if !arepo
+
+            f = open(par.output_file, "w")
+            write_header( f, head)
+            write_block(  f, x,        "POS")
+            write_block(  f, vel,      "VEL")
+            write_block(  f, id,       "ID")
+            write_block(  f, U,        "U")
+            write_block(  f, hsml_out, "HSML")
+            write_block(  f, B,        "BFLD")
+            close(f)
+
+        else
+
+            ρ = Vector{Float32}(undef, N)
+            ρ[left_part] .= Float32(1.0)
+            if par.density_step 
+                ρ[right_part] .= Float32(0.125)
+            else
+                ρ[right_part] .= Float32(1.0)
+            end
+
+            f = open(par.output_file, "w")
+            write_header( f, head)
+            write_block(  f, x,   "POS")
+            write_block(  f, vel, "VEL")
+            write_block(  f, id,  "ID")
+            write_block(  f, U,   "U")
+            write_block(  f, ρ,   "MASS")
+            write_block(  f, B,   "BFLD")
+            close(f)
+
+        end
 
     end
 
