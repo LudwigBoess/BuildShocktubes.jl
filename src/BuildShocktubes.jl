@@ -418,8 +418,6 @@ module BuildShocktubes
         println("setting up tube")
         x_large, hsml_l = getLargeBox(pos, hsml)
 
-        m = 1.0/length(x_large[:,1])
-
         x_small = pos
 
         n_blocks = par.n_blocks
@@ -427,8 +425,10 @@ module BuildShocktubes
         # build tubes
         println("Building x tubes")
         if par.density_step
+            m = 1.0/length(x_large[:,1])
             x_left, hsml_left = buildTube(x_large, n_blocks, hsml_l)
         else
+            m = 1.0/length(x_small[:,1])
             x_left, hsml_left = buildTube(x_small, n_blocks, hsml)
         end
         x_right, hsml_right = buildTube(x_small, n_blocks, hsml, n_blocks)
@@ -504,6 +504,15 @@ module BuildShocktubes
         head.massarr[1] = m
 
         vel = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
+
+        vel[left_part, 1] .= Float32(par.v[1,1])
+        vel[right_part,1] .= Float32(par.v[2,1])
+
+        vel[left_part, 2] .= Float32(par.v[1,2])
+        vel[right_part,2] .= Float32(par.v[2,2])
+
+        vel[left_part, 3] .= Float32(par.v[1,3])
+        vel[right_part,3] .= Float32(par.v[2,3])
 
         id = UInt32.(collect(0:N-1))
 
