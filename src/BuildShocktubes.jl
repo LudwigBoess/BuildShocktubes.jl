@@ -20,6 +20,7 @@ module BuildShocktubes
         B::Array{Float64,2}
         U::Vector{Float64}
         B0::Float64
+        density_step::Bool
         turb::Bool
 
         function ShockParameters(glass_file::String="", output_file::String="",
@@ -27,11 +28,12 @@ module BuildShocktubes
                                 B::Array{Float64,2}=zeros(2,3),
                                 v::Array{Float64,2}=zeros(2,3);
                                 turb::Bool=false,
-                                B0::Float64=0.0, 
+                                B0::Float64=0.0,
+                                density_step::Bool=true,
                                 n_blocks::Int64=70)
 
             new(glass_file, output_file, n_blocks,
-                v, B, U, B0, turb)
+                v, B, U, B0, density_step, turb)
 
         end
     end
@@ -62,7 +64,7 @@ module BuildShocktubes
 
     end
 
-    function getLargeBox(x_in, hsml_in=[0.0])
+    function getLargeBox(x_in::Array{<:Real}, hsml_in::Array{<:Real}=[0.0])
 
         n_part = length(x_in[:,1])
         x = zeros(8*n_part, length(x_in[1,:]))
@@ -91,7 +93,7 @@ module BuildShocktubes
         end
     end
 
-    function buildTube(x0, n_blocks, hsml0=0, offset=0)
+    function buildTube(x0::Array{<:Real}, n_blocks::Integer, hsml0=0, offset=0)
 
         n_part = length(x0[:,1])
         x = zeros(n_blocks*n_part, length(x0[1,:]))
@@ -112,7 +114,7 @@ module BuildShocktubes
         return Float32.(x)
     end
 
-    function build_B_tube(B_in, n_blocks)
+    function build_B_tube(B_in::Array{<:Real}, n_blocks::Integer)
 
         n_part = length(B_in[:,1])
         B = zeros(n_blocks*n_part, length(B_in[1,:]))
@@ -124,7 +126,7 @@ module BuildShocktubes
         return Float32.(B)
     end
 
-    function findii(x, xtab)
+    function findii(x::Real, xtab::Array{<:Real})
 
         n = length(xtab)
 
@@ -148,10 +150,11 @@ module BuildShocktubes
         return imin, imax
     end
 
-    function interpolate_components(Bh, dx::Float64, dy::Float64, dz::Float64,
-                                    ixmin::Int64, ixmax::Int64,
-                                    iymin::Int64, iymax::Int64,
-                                    izmin::Int64, izmax::Int64 )
+    function interpolate_components(Bh::Array{<:Real}, 
+                                    dx::Real, dy::Real, dz::Real,
+                                    ixmin::Integer, ixmax::Integer,
+                                    iymin::Integer, iymax::Integer,
+                                    izmin::Integer, izmax::Integer )
 
         fx1y1z1 = Bh[ixmin, iymin, izmin]
         fx1y1z2 = Bh[ixmin, iymin, izmax]
@@ -174,8 +177,8 @@ module BuildShocktubes
         return b
     end
 
-    function setup_turb_B(pos, 
-                        npart::Int64, B0::Float64)
+    function setup_turb_B(pos::Array{<:Real}, 
+                        npart::Integer, B0::Real)
 
         r = zeros(npart)
 
@@ -206,7 +209,7 @@ module BuildShocktubes
         nnn = (NFFT2+1)^3 * 4
 
         val = randn(nnn)
-        ϕ2  = rand(nnn) .* 2.0π
+        ϕ2  = rand(nnn) .* 2π
 
         kx = zeros(Int64, NFFT)
         ky = zeros(Int64, NFFT)
@@ -339,6 +342,8 @@ module BuildShocktubes
             zp[iz] = 1.0/(kz[iz] * mink)
         end
 
+        @info "FFTW"
+
         Bhx = fft(Bhx)
         Bfehler1 = sum(abs.(imag.(Bhx)))
         Bhx = real.(Bhx)
@@ -383,13 +388,13 @@ module BuildShocktubes
                                         izmin, izmax)
 
             # y component
-            by[i] = interpolate_components(Bhx, dx, dy, dz, 
+            by[i] = interpolate_components(Bhy, dx, dy, dz, 
                                         ixmin, ixmax,
                                         iymin, iymax,
                                         izmin, izmax)
 
             # z component
-            bz[i] = interpolate_components(Bhx, dx, dy, dz, 
+            bz[i] = interpolate_components(Bhz, dx, dy, dz, 
                                         ixmin, ixmax,
                                         iymin, iymax,
                                         izmin, izmax)
@@ -398,7 +403,7 @@ module BuildShocktubes
         return [bx by bz]
     end
 
-    function setup_shocktube(par::ShockParameters)
+    function setup_shocktube(par::ShockParameters; arepo::Bool=false)
 
         println("reading glass file")
         pos_info = Info_Line("POS", Float32, 3, [1,0,0,0,0,0])
@@ -414,15 +419,19 @@ module BuildShocktubes
         println("setting up tube")
         x_large, hsml_l = getLargeBox(pos, hsml)
 
-        m = 1.0/length(x_large[:,1])
-
         x_small = pos
 
         n_blocks = par.n_blocks
 
         # build tubes
         println("Building x tubes")
-        x_left, hsml_left = buildTube(x_large, n_blocks, hsml_l)
+        if par.density_step
+            m = 1.0/length(x_large[:,1])
+            x_left, hsml_left = buildTube(x_large, n_blocks, hsml_l)
+        else
+            m = 1.0/length(x_small[:,1])
+            x_left, hsml_left = buildTube(x_small, n_blocks, hsml)
+        end
         x_right, hsml_right = buildTube(x_small, n_blocks, hsml, n_blocks)
 
         x = [x_left; x_right]
@@ -435,36 +444,40 @@ module BuildShocktubes
         # set up random magnetic field
         if par.turb
 
-            # n_large = length(x_large[:,1])
-            # B_large = setup_turb_B(x_large, n_large, par.B0)
+            n_large = length(x_large[:,1])
+            B_large = setup_turb_B(x_large, n_large, par.B0)
 
-            # n_small = length(x_small[:,1])
-            # B_small = setup_turb_B(x_small, n_small, par.B0)
+            n_small = length(x_small[:,1])
+            B_small = setup_turb_B(x_small, n_small, par.B0)
 
-            # println("Building B tube")
-            # B_left = build_B_tube(B_large, n_blocks)
-            # B_right = build_B_tube(B_small, n_blocks)
-            # B = [B_left; B_right]
+            @info "Building B tube"
+            
+            B_left = build_B_tube(B_large, n_blocks)
+            B_right = build_B_tube(B_small, n_blocks)
+            B = [B_left; B_right]
+            N_B = length(B[:,1])
+
+            # println("Setting up turb B")
+            # B = setup_turb_B(x, N, par.B0)
             # N_B = length(B[:,1])
-            B = setup_turb_B(x, N, par.B0)
-
 
             # if N != N_B
-            #     error("Error in tube building!\nN = $N\nN_B = $N_B")
+            #     error("Error in tube building x!\nN = $N\nN_B = $N_B")
             # end
+
+            B = Float32.(B)
+
 
         else
             B = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
 
-            # Bx =  0.75  0.75
-            # By = +1    -1
-            # Bz =  0     0
-
-            B[left_part,1]  .= Float32(par.B[1,1])
+            B[left_part, 1] .= Float32(par.B[1,1])
             B[right_part,1] .= Float32(par.B[2,1])
-            B[left_part,2]  .= Float32(par.B[1,2])
+
+            B[left_part, 2] .= Float32(par.B[1,2])
             B[right_part,2] .= Float32(par.B[2,2])
-            B[left_part,3]  .= Float32(par.B[1,3])
+
+            B[left_part, 3] .= Float32(par.B[1,3])
             B[right_part,3] .= Float32(par.B[2,3])
         end
 
@@ -485,18 +498,22 @@ module BuildShocktubes
 
         println("Assigning shock parameters")
 
-
         head = head_to_obj(par.glass_file)
         head.boxsize = 100000.0
         head.npart[1] = N
         head.nall[1] = N
         head.massarr[1] = m
 
-        ρ = Vector{Float32}(undef, N)
-        ρ[left_part] .= Float32(1.0)
-        ρ[right_part] .= Float32(0.125)
-
         vel = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
+
+        vel[left_part, 1] .= Float32(par.v[1,1])
+        vel[right_part,1] .= Float32(par.v[2,1])
+
+        vel[left_part, 2] .= Float32(par.v[1,2])
+        vel[right_part,2] .= Float32(par.v[2,2])
+
+        vel[left_part, 3] .= Float32(par.v[1,3])
+        vel[right_part,3] .= Float32(par.v[2,3])
 
         id = UInt32.(collect(0:N-1))
 
@@ -509,15 +526,39 @@ module BuildShocktubes
 
         println("writing ic file")
 
-        f = open(par.output_file, "w")
-        write_header(f, head)
-        write_block(f, x, "POS")
-        write_block(f, vel, "VEL")
-        write_block(f, id, "ID")
-        write_block(f, U, "U")
-        write_block(f, hsml_out, "HSML")
-        write_block(f, B, "BFLD")
-        close(f)
+        if !arepo
+
+            f = open(par.output_file, "w")
+            write_header( f, head)
+            write_block(  f, x,        "POS")
+            write_block(  f, vel,      "VEL")
+            write_block(  f, id,       "ID")
+            write_block(  f, U,        "U")
+            write_block(  f, hsml_out, "HSML")
+            write_block(  f, B,        "BFLD")
+            close(f)
+
+        else
+
+            ρ = Vector{Float32}(undef, N)
+            ρ[left_part] .= Float32(1.0)
+            if par.density_step 
+                ρ[right_part] .= Float32(0.125)
+            else
+                ρ[right_part] .= Float32(1.0)
+            end
+
+            f = open(par.output_file, "w")
+            write_header( f, head)
+            write_block(  f, x,   "POS")
+            write_block(  f, vel, "VEL")
+            write_block(  f, id,  "ID")
+            write_block(  f, U,   "U")
+            write_block(  f, ρ,   "MASS")
+            write_block(  f, B,   "BFLD")
+            close(f)
+
+        end
 
     end
 
