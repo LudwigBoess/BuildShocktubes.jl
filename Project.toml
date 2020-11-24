@@ -11,5 +11,6 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 
 [compat]
+ProgressMeter = "1.4"
 FFTW = "1.2"
 GadgetIO = "0.3"
