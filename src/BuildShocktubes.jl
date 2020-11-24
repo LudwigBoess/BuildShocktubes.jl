@@ -69,10 +69,11 @@ module BuildShocktubes
 
         count = 0
 
-        for ix = 0:1, iy = 0:1, iz = 0:1
-            ii = [ix, iy, iz]
-            for dim = 1:3
-                x[count*n_part+1:(count+1)*n_part,dim] = (x_in[:,dim] .+ ii[dim])
+        @inbounds for ix = 0:1, iy = 0:1, iz = 0:1
+            @inbounds @fastmath @simd for i = 1:n_part
+                x[count*n_part+i,1] = x_in[i,1] + ix
+                x[count*n_part+i,2] = x_in[i,2] + iy
+                x[count*n_part+i,3] = x_in[i,3] + iz
             end
             count += 1
         end
@@ -81,7 +82,7 @@ module BuildShocktubes
 
         if hsml_in != [0.0]
             h = zeros(8*n_part)
-            for i = 0:7
+            @inbounds @simd for i = 0:7
                 h[i*n_part+1:(i+1)*n_part] = 0.5 .* hsml_in[:,1]
             end
             return x, h
