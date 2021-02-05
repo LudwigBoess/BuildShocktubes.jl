@@ -66,16 +66,16 @@ module BuildShocktubes
 
     function getLargeBox(x_in::Array{<:Real}, hsml_in::Array{<:Real}=[0.0])
 
-        n_part = length(x_in[:,1])
-        x = zeros(8*n_part, length(x_in[1,:]))
+        n_part = size(x_in,2)
+        x = Array{eltype(x_in[1]),2}(undef, 3, n_part)
 
         count = 0
 
         @inbounds for ix = 0:1, iy = 0:1, iz = 0:1
             @inbounds @fastmath @simd for i = 1:n_part
-                x[count*n_part+i,1] = x_in[i,1] + ix
-                x[count*n_part+i,2] = x_in[i,2] + iy
-                x[count*n_part+i,3] = x_in[i,3] + iz
+                x[1,count*n_part+i] = x_in[1,i] + ix
+                x[2,count*n_part+i] = x_in[2,i] + iy
+                x[3,count*n_part+i] = x_in[3,i] + iz
             end
             count += 1
         end
@@ -85,7 +85,7 @@ module BuildShocktubes
         if hsml_in != [0.0]
             h = zeros(8*n_part)
             @inbounds @simd for i = 0:7
-                h[i*n_part+1:(i+1)*n_part] = 0.5 .* hsml_in[:,1]
+                h[i*n_part+1:(i+1)*n_part] = 0.5 .* hsml_in
             end
             return x, h
         else
@@ -95,11 +95,11 @@ module BuildShocktubes
 
     function buildTube(x0::Array{<:Real}, n_blocks::Integer, hsml0=0, offset=0)
 
-        n_part = length(x0[:,1])
-        x = zeros(n_blocks*n_part, length(x0[1,:]))
+        n_part = size(x_in,2)
+        x = Array{eltype(x_in[1]),2}(undef, 3, n_part)
 
         for i = 0:n_blocks-1
-            x[i*n_part+1:(i+1)*n_part,:] = i .* [1.0 0.0 0.0] .+ x0 .+ [offset 0.0 0.0]
+            x[:,i*n_part+1:(i+1)*n_part] = i .* [1.0, 0.0, 0.0] .+ x0 .+ [offset, 0.0, 0.0]
         end
 
         if hsml0 != 0
@@ -116,11 +116,11 @@ module BuildShocktubes
 
     function build_B_tube(B_in::Array{<:Real}, n_blocks::Integer)
 
-        n_part = length(B_in[:,1])
-        B = zeros(n_blocks*n_part, length(B_in[1,:]))
+        n_part = size(B_in,2)
+        B = Array{eltype(B_in[1]),2}(undef, 3, n_part)
 
         for i = 0:n_blocks-1
-            B[i*n_part+1:(i+1)*n_part,:] .= B_in
+            B[:,i*n_part+1:(i+1)*n_part] .= B_in
         end
 
         return Float32.(B)
@@ -406,13 +406,13 @@ module BuildShocktubes
     function setup_shocktube(par::ShockParameters; arepo::Bool=false)
 
         println("reading glass file")
-        pos_info = Info_Line("POS", Float32, 3, [1,0,0,0,0,0])
-        hsml_info = Info_Line("HSML", Float32, 1, [1,0,0,0,0,0])
+        pos_info = InfoLine("POS", Float32, 3, [1,0,0,0,0,0])
+        hsml_info = InfoLine("HSML", Float32, 1, [1,0,0,0,0,0])
 
         h = head_to_obj(par.glass_file)
 
-        pos = Float32(1.0/h.boxsize) .* read_block_by_name(par.glass_file, "POS", info=pos_info, parttype=0)
-        hsml = Float32(1.0/h.boxsize) .* read_block_by_name(par.glass_file, "HSML", info=hsml_info, parttype=0)
+        pos  = Float32(1.0/h.boxsize) .* read_block(par.glass_file, "POS", info=pos_info, parttype=0)
+        hsml = Float32(1.0/h.boxsize) .* read_block(par.glass_file, "HSML", info=hsml_info, parttype=0)
 
         println("read!")
 
@@ -426,28 +426,28 @@ module BuildShocktubes
         # build tubes
         println("Building x tubes")
         if par.density_step
-            m = 1.0/length(x_large[:,1])
+            m = 1.0/size(x_large,2)
             x_left, hsml_left = buildTube(x_large, n_blocks, hsml_l)
         else
-            m = 1.0/length(x_small[:,1])
+            m = 1.0/size(x_small,2)
             x_left, hsml_left = buildTube(x_small, n_blocks, hsml)
         end
         x_right, hsml_right = buildTube(x_small, n_blocks, hsml, n_blocks)
 
-        x = [x_left; x_right]
-        hsml_out = [hsml_left; hsml_right]
-        N = length(x[:,1])
+        x        = hcat(x_left, x_right)
+        hsml_out = hcat(hsml_left, hsml_right)
+        N = size(x,2)
 
-        left_part = findall(x[:,1] .<= Float64(par.n_blocks))
-        right_part = findall(x[:,1] .> Float64(par.n_blocks))
+        left_part = findall(x[1,:] .<= Float64(par.n_blocks))
+        right_part = findall(x[1,:] .> Float64(par.n_blocks))
 
         # set up random magnetic field
         if par.turb
 
-            n_large = length(x_large[:,1])
+            n_large = size(x_large,2)
             B_large = setup_turb_B(x_large, n_large, par.B0)
 
-            n_small = length(x_small[:,1])
+            n_small = size(x_small,2)
             B_small = setup_turb_B(x_small, n_small, par.B0)
 
             @info "Building B tube"
@@ -469,30 +469,29 @@ module BuildShocktubes
 
 
         else
-            B = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
+            B = Array{Float32,2}(undef, 3, N)
 
-            B[left_part, 1] .= Float32(par.B[1,1])
-            B[right_part,1] .= Float32(par.B[2,1])
+            B[1, left_part ] .= Float32(par.B[1,1])
+            B[1, right_part] .= Float32(par.B[2,1])
 
-            B[left_part, 2] .= Float32(par.B[1,2])
-            B[right_part,2] .= Float32(par.B[2,2])
+            B[2, left_part ] .= Float32(par.B[1,2])
+            B[2, right_part] .= Float32(par.B[2,2])
 
-            B[left_part, 3] .= Float32(par.B[1,3])
-            B[right_part,3] .= Float32(par.B[2,3])
+            B[3, left_part ] .= Float32(par.B[1,3])
+            B[3, right_part] .= Float32(par.B[2,3])
         end
 
         println("done")
-        MASS = Float32.(m .* ones(N))
 
         println("Checking uniqueness of positions.")
-        unique_check = (length(unique(x, dims=1)[:,1]) == N) ? true : false
+        unique_check = (size(unique(x, dims=1),1) == N) ? true : false
 
         if unique_check == false
             return "ERROR! Overlapping particles!"
         end
 
 
-        println(minimum(x[:,1]), " ", maximum(x[:,1]))
+        println(minimum(x[1,:]), " ", maximum(x[1,:]))
 
         println("Number of particles = ", N)
 
@@ -504,16 +503,16 @@ module BuildShocktubes
         head.nall[1] = N
         head.massarr[1] = m
 
-        vel = [ Float32.(zeros(N)) Float32.(zeros(N)) Float32.(zeros(N))]
+        vel = Array{Float32,2}(undef, 3, N)
 
-        vel[left_part, 1] .= Float32(par.v[1,1])
-        vel[right_part,1] .= Float32(par.v[2,1])
+        vel[1, left_part ] .= Float32(par.v[1,1])
+        vel[1, right_part] .= Float32(par.v[2,1])
 
-        vel[left_part, 2] .= Float32(par.v[1,2])
-        vel[right_part,2] .= Float32(par.v[2,2])
+        vel[2, left_part ] .= Float32(par.v[1,2])
+        vel[2, right_part] .= Float32(par.v[2,2])
 
-        vel[left_part, 3] .= Float32(par.v[1,3])
-        vel[right_part,3] .= Float32(par.v[2,3])
+        vel[3, left_part ] .= Float32(par.v[1,3])
+        vel[3, right_part] .= Float32(par.v[2,3])
 
         id = UInt32.(collect(0:N-1))
 
