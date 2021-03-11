@@ -25,8 +25,8 @@ module BuildShocktubes
 
         function ShockParameters(glass_file::String="", output_file::String="",
                                 U::Vector{Float64}=zeros(2),
-                                B::Array{Float64,2}=zeros(2,3),
-                                v::Array{Float64,2}=zeros(2,3);
+                                B::Array{Float64,2}=zeros(3,2),
+                                v::Array{Float64,2}=zeros(3,2);
                                 turb::Bool=false,
                                 B0::Float64=0.0,
                                 density_step::Bool=true,
@@ -66,13 +66,14 @@ module BuildShocktubes
 
     function getLargeBox(x_in::Array{<:Real}, hsml_in::Array{<:Real}=[0.0])
 
-        n_part = size(x_in,2)
-        x = Array{eltype(x_in[1]),2}(undef, 3, n_part)
+        n_part = size(x_in, ndims(x_in))
+        
+        x = Matrix{eltype(x_in[1])}(undef, 3, 8n_part)
 
         count = 0
 
-        @inbounds for ix = 0:1, iy = 0:1, iz = 0:1
-            @inbounds @fastmath @simd for i = 1:n_part
+        for ix = 0:1, iy = 0:1, iz = 0:1
+            for i = 1:n_part
                 x[1,count*n_part+i] = x_in[1,i] + ix
                 x[2,count*n_part+i] = x_in[2,i] + iy
                 x[3,count*n_part+i] = x_in[3,i] + iz
@@ -83,8 +84,8 @@ module BuildShocktubes
         x = 0.5 .* x
 
         if hsml_in != [0.0]
-            h = zeros(8*n_part)
-            @inbounds @simd for i = 0:7
+            h = Vector{eltype(hsml_in[1])}(undef, 8n_part)
+            for i = 0:7
                 h[i*n_part+1:(i+1)*n_part] = 0.5 .* hsml_in
             end
             return x, h
@@ -95,15 +96,15 @@ module BuildShocktubes
 
     function buildTube(x0::Array{<:Real}, n_blocks::Integer, hsml0=0, offset=0)
 
-        n_part = size(x_in,2)
-        x = Array{eltype(x_in[1]),2}(undef, 3, n_part)
+        n_part = size(x0, ndims(x0))
+        x = Matrix{eltype(x0[1])}(undef, 3, n_blocks*n_part)
 
         for i = 0:n_blocks-1
             x[:,i*n_part+1:(i+1)*n_part] = i .* [1.0, 0.0, 0.0] .+ x0 .+ [offset, 0.0, 0.0]
         end
 
         if hsml0 != 0
-            hsml = zeros(n_blocks*n_part)
+            hsml = Vector{eltype(hsml0[1])}(undef, n_blocks*n_part)
             for i = 0:n_blocks-1
                 hsml[i*n_part+1:(i+1)*n_part] = hsml0
             end
@@ -434,9 +435,9 @@ module BuildShocktubes
         end
         x_right, hsml_right = buildTube(x_small, n_blocks, hsml, n_blocks)
 
-        x        = hcat(x_left, x_right)
-        hsml_out = hcat(hsml_left, hsml_right)
-        N = size(x,2)
+        x        = [x_left x_right]
+        hsml_out = [hsml_left; hsml_right]
+        N = size(x, ndims(x))
 
         left_part = findall(x[1,:] .<= Float64(par.n_blocks))
         right_part = findall(x[1,:] .> Float64(par.n_blocks))
@@ -454,8 +455,8 @@ module BuildShocktubes
             
             B_left = build_B_tube(B_large, n_blocks)
             B_right = build_B_tube(B_small, n_blocks)
-            B = [B_left; B_right]
-            N_B = length(B[:,1])
+            B = [B_left B_right]
+            N_B = size(B,ndims(B))
 
             # println("Setting up turb B")
             # B = setup_turb_B(x, N, par.B0)
@@ -472,19 +473,19 @@ module BuildShocktubes
             B = Array{Float32,2}(undef, 3, N)
 
             B[1, left_part ] .= Float32(par.B[1,1])
-            B[1, right_part] .= Float32(par.B[2,1])
+            B[1, right_part] .= Float32(par.B[1,2])
 
-            B[2, left_part ] .= Float32(par.B[1,2])
+            B[2, left_part ] .= Float32(par.B[2,1])
             B[2, right_part] .= Float32(par.B[2,2])
 
-            B[3, left_part ] .= Float32(par.B[1,3])
-            B[3, right_part] .= Float32(par.B[2,3])
+            B[3, left_part ] .= Float32(par.B[3,1])
+            B[3, right_part] .= Float32(par.B[3,2])
         end
 
         println("done")
 
         println("Checking uniqueness of positions.")
-        unique_check = (size(unique(x, dims=1),1) == N) ? true : false
+        unique_check = (size(unique(x, dims=2),2) == N) ? true : false
 
         if unique_check == false
             return "ERROR! Overlapping particles!"
@@ -506,13 +507,13 @@ module BuildShocktubes
         vel = Array{Float32,2}(undef, 3, N)
 
         vel[1, left_part ] .= Float32(par.v[1,1])
-        vel[1, right_part] .= Float32(par.v[2,1])
+        vel[1, right_part] .= Float32(par.v[1,2])
 
-        vel[2, left_part ] .= Float32(par.v[1,2])
+        vel[2, left_part ] .= Float32(par.v[2,1])
         vel[2, right_part] .= Float32(par.v[2,2])
 
-        vel[3, left_part ] .= Float32(par.v[1,3])
-        vel[3, right_part] .= Float32(par.v[2,3])
+        vel[3, left_part ] .= Float32(par.v[3,1])
+        vel[3, right_part] .= Float32(par.v[3,2])
 
         id = UInt32.(collect(0:N-1))
 
