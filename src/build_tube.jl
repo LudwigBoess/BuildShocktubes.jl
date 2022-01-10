@@ -52,7 +52,7 @@ end
 function build_B_tube(B_in::Array{<:Real}, n_blocks::Integer)
 
     n_part = size(B_in,2)
-    B = Array{eltype(B_in[1]),2}(undef, 3, n_part)
+    B = Array{eltype(B_in[1]),2}(undef, 3, n_blocks*n_part)
 
     for i = 0:n_blocks-1
         B[:,i*n_part+1:(i+1)*n_part] .= B_in

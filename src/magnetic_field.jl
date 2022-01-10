@@ -21,6 +21,15 @@ function get_bfield_from_angle(theta::Real;
 end
 
 
+function read_Bfield(filename, Npart)
+    f = open(filename, "r")
+    bfld = read!(f, Matrix{Float32}(undef, 3, Npart))
+    close(f)
+
+    return bfld
+end
+
+
 
 function findii(x::Real, xtab::Array{<:Real})
 

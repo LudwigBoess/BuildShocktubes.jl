@@ -64,16 +64,34 @@ function setup_shocktube(par::ShockParameters; arepo::Bool=false)
 
 
     else
-        B = Array{Float32,2}(undef, 3, N)
+        if par.B_filename == ""
+            B = Array{Float32,2}(undef, 3, N)
 
-        B[1, left_part ] .= Float32(par.B[1,1])
-        B[1, right_part] .= Float32(par.B[1,2])
+            B[1, left_part ] .= Float32(par.B[1,1])
+            B[1, right_part] .= Float32(par.B[1,2])
 
-        B[2, left_part ] .= Float32(par.B[2,1])
-        B[2, right_part] .= Float32(par.B[2,2])
+            B[2, left_part ] .= Float32(par.B[2,1])
+            B[2, right_part] .= Float32(par.B[2,2])
 
-        B[3, left_part ] .= Float32(par.B[3,1])
-        B[3, right_part] .= Float32(par.B[3,2])
+            B[3, left_part ] .= Float32(par.B[3,1])
+            B[3, right_part] .= Float32(par.B[3,2])
+        else
+            println("reading Bfld data")
+            n_small = size(x_small,2)
+            n_large = size(x_large,2)
+
+            B_small = read_Bfield(par.B_filename * ".dat", n_small)
+            B_large = read_Bfield(par.B_filename * "_large.dat", n_large)
+
+            B_left = build_B_tube(B_large, n_blocks)
+            B_right = build_B_tube(B_small, n_blocks)
+
+            B = [B_left B_right]
+
+            N_B = size(B,ndims(B))
+
+            B = Float32.(B)
+        end
     end
 
     println("done")

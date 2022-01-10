@@ -29,6 +29,7 @@ module BuildShocktubes
         cr_slope::Float64
         p_lim::Vector{Float64}
         Nbins::Int64
+        B_filename::String
 
         function ShockParameters(glass_file::String="", output_file::String="",
                                 U::Vector{Float64}=zeros(2),
@@ -44,11 +45,12 @@ module BuildShocktubes
                                 p_lim::Vector{Float64}=[1.0, 1.e6],
                                 Nbins::Int64=48,
                                 density_step::Bool=true,
-                                n_blocks::Int64=70)
+                                n_blocks::Int64=70,
+                                B_filename::String="")
 
             new(glass_file, output_file, n_blocks,
                 v, B, U, B0, density_step, turb,
-                CRp, CRe, Xcr, Kep, cr_slope, p_lim, Nbins)
+                CRp, CRe, Xcr, Kep, cr_slope, p_lim, Nbins, B_filename)
 
         end
     end
