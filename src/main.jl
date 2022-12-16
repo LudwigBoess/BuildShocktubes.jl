@@ -20,14 +20,18 @@ function setup_shocktube(par::ShockParameters; arepo::Bool=false)
 
     # build tubes
     println("Building x tubes")
+    x_right, hsml_right = buildTube(x_small, n_blocks, hsml, n_blocks)
+    M = par.rho[1] # boxsize = 1 -> vol = 1
+
     if par.density_step
-        m = 1.0/size(x_large,2)
+        m = M / size(x_large,2)
         x_left, hsml_left = buildTube(x_large, n_blocks, hsml_l)
     else
-        m = 1.0/size(x_small,2)
+        m = M / size(x_small,2)
         x_left, hsml_left = buildTube(x_small, n_blocks, hsml)
     end
-    x_right, hsml_right = buildTube(x_small, n_blocks, hsml, n_blocks)
+    
+    println("particle mass m = $m")
 
     x        = [x_left x_right]
     hsml_out = [hsml_left; hsml_right]
@@ -252,6 +256,7 @@ function setup_shocktube(par::ShockParameters; arepo::Bool=false)
             write_block( f, pCut,   "CRpC")
             write_block( f, eCut,   "CReC")
         end
+
         close(f)
 
     else

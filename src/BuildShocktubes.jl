@@ -19,6 +19,7 @@ module BuildShocktubes
         v::Array{Float64,2}
         B::Array{Float64,2}
         U::Vector{Float64}
+        rho::Vector{Float64}
         B0::Float64
         density_step::Bool
         turb::Bool
@@ -35,6 +36,7 @@ module BuildShocktubes
                                 U::Vector{Float64}=zeros(2),
                                 B::Array{Float64,2}=zeros(3,2),
                                 v::Array{Float64,2}=zeros(3,2);
+                                rho=[1.0, 0.125],
                                 turb::Bool=false,
                                 B0::Float64=0.0,
                                 CRp::Bool=false,
@@ -49,7 +51,7 @@ module BuildShocktubes
                                 B_filename::String="")
 
             new(glass_file, output_file, n_blocks,
-                v, B, U, B0, density_step, turb,
+                v, B, U, rho, B0, density_step, turb,
                 CRp, CRe, Xcr, Kep, cr_slope, p_lim, Nbins, B_filename)
 
         end
