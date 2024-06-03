@@ -4,7 +4,7 @@ function setup_shocktube(par::ShockParameters; arepo::Bool=false)
     pos_info = InfoLine("POS", Float32, 3, [1,0,0,0,0,0])
     hsml_info = InfoLine("HSML", Float32, 1, [1,0,0,0,0,0])
 
-    h = head_to_obj(par.glass_file)
+    h = read_header(par.glass_file)
 
     pos  = Float32(1.0/h.boxsize) .* read_block(par.glass_file, "POS", info=pos_info, parttype=0)
     hsml = Float32(1.0/h.boxsize) .* read_block(par.glass_file, "HSML", info=hsml_info, parttype=0)
@@ -114,7 +114,7 @@ function setup_shocktube(par::ShockParameters; arepo::Bool=false)
 
     println("Assigning shock parameters")
 
-    head = head_to_obj(par.glass_file)
+    head = read_header(par.glass_file)
     head.boxsize = 100000.0
     head.npart[1] = N
     head.nall[1] = N
@@ -231,6 +231,10 @@ function setup_shocktube(par::ShockParameters; arepo::Bool=false)
         U[right_part] .= Float32(par.U[2])
     end
 
+    rho = Vector{Float32}(undef, N)
+    rho[left_part]  .= Float32(par.rho[1])
+    rho[right_part] .= Float32(par.rho[2])
+
     println("done")
 
     println("writing ic file")
@@ -243,6 +247,7 @@ function setup_shocktube(par::ShockParameters; arepo::Bool=false)
         write_block(  f, x,        "POS")
         write_block(  f, vel,      "VEL")
         write_block(  f, id,       "ID")
+        write_block(  f, rho,       "RHO")
         write_block(  f, U,        "U")
         write_block(  f, hsml_out, "HSML")
         write_block(  f, B,        "BFLD")
