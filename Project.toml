@@ -12,6 +12,6 @@ ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 
 [compat]
 FFTW = "1.2"
-GadgetIO = "0.6, 0.7"
+GadgetIO = "0.6, 0.7, 0.8"
 ProgressMeter = "1.4"
 julia = "1.6"
